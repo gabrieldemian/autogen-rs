@@ -1,5 +1,5 @@
 use autogen::{
-    agent::{Agent, AgentMessage, AssistantAgent, UserProxy, Assistant},
+    agent::{Agent, AgentMessage, AgentReplyTrigger, AssistantAgent},
     builder::{AssistantBuilder, Builder, UserProxyBuilder},
     config::Config,
 };
@@ -7,22 +7,23 @@ use std::error::Error;
 use tokio::spawn;
 
 struct CustomAgent {
-    nada: String,
+    name: String,
 }
 
 impl<'a> Agent<'a> for CustomAgent {
-    async fn run(&mut self) {}
+    async fn run(&mut self) {
+        //
+    }
 }
 
 impl<'a> AssistantAgent<'a> for CustomAgent {
-    fn register_repply<T: Agent<'a>>(
+    fn register_repply(
         &mut self,
-        trigger: autogen::agent::AgentReplyTrigger<'a, T>,
+        trigger: autogen::agent::AgentReplyTrigger<'a>,
         function: autogen::agent::AgentReplyFn,
     ) {
         //
     }
-    // async fn run(&mut self) {}
 }
 
 #[tokio::main]
@@ -31,11 +32,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut user = UserProxyBuilder::new("user_proxy")
         .config_list(config_list.clone())
-        .build::<UserProxy<'_>>();
+        .build();
 
-    let mut assistant = AssistantBuilder::new("assistant")
-        .config_list(config_list)
-        .build::<Assistant<'_>>();
+    let mut assistant =
+        AssistantBuilder::new("assistant").config_list(config_list).build();
+
+    assistant.register_repply(
+        AgentReplyTrigger::Name(user.ctx.name),
+        Box::new(|| {
+            println!("will be called when user sends a message");
+        }),
+    );
 
     let user_ctx = user.ctx.clone();
     let assistant_ctx = assistant.ctx.clone();

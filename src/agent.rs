@@ -29,27 +29,13 @@ pub enum AgentMessage<'a> {
 
 /// When defining a custom reply for a custom agent,
 /// it can have the following triggers:
-pub enum AgentReplyTrigger<'a, T: Agent<'a>> {
+pub enum AgentReplyTrigger<'a> {
     /// Trigger by name of the calling agent.
     Name(&'a str),
-    /// Trigger by the trait of the calling agent.
-    Trait(T),
+    // todo: support implementations of Agent in the future.
 }
 
 pub type AgentReplyFn = Box<dyn FnMut() + std::marker::Send>;
-
-/// All custom Agents must implement this trait.
-pub trait Agent<'a> {
-    const DEFAULT_MODEL: &'a str = "gpt-4";
-    const MAX_CONSECUTIVE_AUTO_REPLY: u32 = 100;
-    const DEFAULT_DESCRIPTION: &'a str = "";
-    const DEFAULT_SYSTEM_MESSAGE: &'a str = "";
-
-    /// Implementers of Agent must overwride this fn.
-    fn run(&mut self) -> impl std::future::Future<Output = ()> + Send {
-        async {}
-    }
-}
 
 /// Context/public data of an Agent that is shared between other agents.
 /// They can communicate by sending messages to `tx`.
@@ -70,14 +56,25 @@ pub struct Assistant<'a> {
     pub config_list: Vec<Config>,
     pub messages: HashMap<&'a str, Vec<&'a str>>,
     pub rx: Option<mpsc::Receiver<AgentMessage<'a>>>,
-    pub reply_fn_list: Vec<AgentReplyFn>,
+    pub reply_fn_list: Vec<Box<dyn FnMut() + std::marker::Send>>,
+}
+
+/// All custom Agents must implement this trait.
+pub trait Agent<'a> {
+    const DEFAULT_MODEL: &'a str = "gpt-4";
+    const MAX_CONSECUTIVE_AUTO_REPLY: u32 = 100;
+    const DEFAULT_DESCRIPTION: &'a str = "";
+    const DEFAULT_SYSTEM_MESSAGE: &'a str = "";
+
+    /// Implementers of Agent must overwride this fn.
+    fn run(&mut self) -> impl std::future::Future<Output = ()> + Send;
 }
 
 /// Trait for creating custom agents derived from `Assistant`.
 pub trait AssistantAgent<'a> {
-    fn register_repply<T: Agent<'a>>(
+    fn register_repply(
         &mut self,
-        trigger: AgentReplyTrigger<'a, T>,
+        trigger: AgentReplyTrigger<'a>,
         function: AgentReplyFn,
     );
 }
@@ -85,9 +82,9 @@ pub trait AssistantAgent<'a> {
 // Blanked impl for Assistant, anyone who implements Assistant
 // will automatically implement AssistantAgent.
 impl<'a> AssistantAgent<'a> for Assistant<'a> {
-    fn register_repply<T: Agent<'a>>(
+    fn register_repply(
         &mut self,
-        trigger: AgentReplyTrigger<'a, T>,
+        trigger: AgentReplyTrigger<'a>,
         function: AgentReplyFn,
     ) {
         //
