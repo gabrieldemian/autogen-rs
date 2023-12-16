@@ -6,8 +6,8 @@ use autogen::{
 use std::error::Error;
 use tokio::spawn;
 
-struct CustomAgent {
-    name: String,
+pub struct CustomAgent {
+    pub name: String,
 }
 
 impl<'a> Agent<'a> for CustomAgent {
@@ -20,7 +20,7 @@ impl<'a> AssistantAgent<'a> for CustomAgent {
     fn register_repply(
         &mut self,
         trigger: autogen::agent::AgentReplyTrigger<'a>,
-        function: autogen::agent::AgentReplyFn,
+        function: Box<(dyn FnMut(&mut Self) + std::marker::Send + 'static)>,
     ) {
         //
     }
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     assistant.register_repply(
         AgentReplyTrigger::Name(user.ctx.name),
-        Box::new(|| {
+        Box::new(|_agent| {
             println!("will be called when user sends a message");
         }),
     );

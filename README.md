@@ -1,3 +1,6 @@
+> ![WARNING]
+> Work in progress, this is not finished yet.
+
 # initialization
 
 The first step is to load the configuration. This can be done be reading a json file, or by manually initialing the struct. This configuration will be passed to all the agents.
@@ -16,7 +19,7 @@ let config_list: Vec<Config> = serde_json::from_str(
 We initialize the agents using the builder pattern. This pattern is great when you have many optional values or you want to hide initialization logic, which is the case here.
 
 ```rs
-// ...
+// ...rest of the code
 let mut assistant = AssistantBuilder::new("assistant").config_list(config.clone()).build();
 
 let mut user_proxy = UserProxyBuilder::new("user_proxy").config_list(config).build();
@@ -31,6 +34,7 @@ let mut user_proxy = UserProxyBuilder::new("user_proxy").config_list(config).bui
 Agents communicate with each other by using Rust built-in mpsc channel. Actually, the code uses the tokio version of mpsc, which is async, but there is the option to use sync as well.
 
 ```rs
+// ...rest of the code
 let user_ctx = user.ctx.clone();
 let assistant_ctx = assistant.ctx.clone();
 
@@ -71,11 +75,10 @@ Like the original AutoGen, custom repplies can be triggered by a specific agent 
 
 Custom agents can be done by creating a custom struct that implements the `Agent` and `AssistantAgent` trait. Aditionaly, it is possible to reuse the builder trait `Builder` to build this custom agent.
 
-The `AssistantAgent` handles logic that is specific to assistants, in this case, it requires the function `request_reply` to be implemented.
+The `AssistantAgent` handles logic that is specific to assistants, in this case, it requires the function `register_reply` to be implemented.
 
 The `Agent` handles logic for all agents, the `run` function and some constants strings, like model, description, system message, etc.
 
-Custom replies can be done by calling `register_repply`.
 
 ### Advantages
 - Flexible custom agents, with their own data structures, and custom functions to handle messages.
@@ -83,6 +86,7 @@ Custom replies can be done by calling `register_repply`.
 ### Disadvantages
 - More verbosity to implement custom agents.
 
+Implementing a custom agent:
 ```rs
 struct CustomAgent {
     name: String,
@@ -104,3 +108,24 @@ impl<'a> AssistantAgent<'a> for CustomAgent {
     }
 }
 ```
+
+Custom replies can be done by calling `register_repply`. One can specify when the function will trigger, by passing the name of the caller agent. And the callback which has access to the data of the agent.
+
+Adding custom replies to an agent that implements the trait `AssistantAgent` or `Assistant`:
+
+```rs
+// ...rest of the code
+let mut assistant =
+    AssistantBuilder::new("assistant").config_list(config_list).build();
+
+assistant.register_repply(
+    AgentReplyTrigger::Name(user.ctx.name),
+    Box::new(|agent| {
+        agent.messages.get_mut("asd").unwrap().push("something");
+        println!("will be called when user sends a message");
+    }),
+);
+```
+
+### Advantages
+- The callback of `register_repply` has a mutable reference to it's struct. Making possible to have total control over it's data and to mutate anything. It is also possible to send messages to other agents.

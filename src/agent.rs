@@ -35,7 +35,7 @@ pub enum AgentReplyTrigger<'a> {
     // todo: support implementations of Agent in the future.
 }
 
-pub type AgentReplyFn = Box<dyn FnMut() + std::marker::Send>;
+// pub type AgentReplyFn = Box<dyn FnMut() + std::marker::Send>;
 
 /// Context/public data of an Agent that is shared between other agents.
 /// They can communicate by sending messages to `tx`.
@@ -56,7 +56,7 @@ pub struct Assistant<'a> {
     pub config_list: Vec<Config>,
     pub messages: HashMap<&'a str, Vec<&'a str>>,
     pub rx: Option<mpsc::Receiver<AgentMessage<'a>>>,
-    pub reply_fn_list: Vec<Box<dyn FnMut() + std::marker::Send>>,
+    pub reply_fn_list: Vec<Box<dyn FnMut(&mut Self) + std::marker::Send>>,
 }
 
 /// All custom Agents must implement this trait.
@@ -75,7 +75,8 @@ pub trait AssistantAgent<'a> {
     fn register_repply(
         &mut self,
         trigger: AgentReplyTrigger<'a>,
-        function: AgentReplyFn,
+        // function: AgentReplyFn,
+        function: Box<(dyn FnMut(&mut Self) + std::marker::Send + 'static)>,
     );
 }
 
@@ -85,7 +86,8 @@ impl<'a> AssistantAgent<'a> for Assistant<'a> {
     fn register_repply(
         &mut self,
         trigger: AgentReplyTrigger<'a>,
-        function: AgentReplyFn,
+        function: Box<(dyn FnMut(&mut Self) + std::marker::Send + 'static)>,
+        // function: AgentReplyFn,
     ) {
         //
     }
