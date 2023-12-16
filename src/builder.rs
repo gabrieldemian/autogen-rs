@@ -1,10 +1,14 @@
+//! Contain builders for all agents and a builder trait.
 use std::sync::Arc;
 
 use hashbrown::HashMap;
 use tokio::sync::mpsc;
 
 use crate::{
-    agent::{Agent, AgentCtx, AgentMessage, Assistant, UserProxy},
+    agent::{
+        assistant::Assistant, user_proxy::UserProxy, Agent, AgentCtx,
+        AgentMessage,
+    },
     config::Config,
 };
 

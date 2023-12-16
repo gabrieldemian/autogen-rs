@@ -1,30 +1,12 @@
 use autogen::{
-    agent::{Agent, AgentMessage, AgentReplyTrigger, AssistantAgent},
+    agent::{
+        assistant::AssistantAgent, Agent, AgentMessage, AgentReplyTrigger,
+    },
     builder::{AssistantBuilder, Builder, UserProxyBuilder},
     config::Config,
 };
 use std::error::Error;
 use tokio::spawn;
-
-pub struct CustomAgent {
-    pub name: String,
-}
-
-impl<'a> Agent<'a> for CustomAgent {
-    async fn run(&mut self) {
-        //
-    }
-}
-
-impl<'a> AssistantAgent<'a> for CustomAgent {
-    fn register_repply(
-        &mut self,
-        trigger: autogen::agent::AgentReplyTrigger<'a>,
-        function: Box<(dyn FnMut(&mut Self) + std::marker::Send + 'static)>,
-    ) {
-        //
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -37,8 +19,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut assistant =
         AssistantBuilder::new("assistant").config_list(config_list).build();
 
+    // we can register a custom repply that will be triggered
+    // when a specific agent sends a message.
     assistant.register_repply(
-        AgentReplyTrigger::Name(user.ctx.name),
+        AgentReplyTrigger(assistant.ctx.name),
         Box::new(|_agent| {
             println!("will be called when user sends a message");
         }),
@@ -58,7 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     user_ctx
         .tx
         .send(AgentMessage::InitiateChat {
-            message: "initiating chat with the first message.".to_owned(),
+            message: "What date is today? Compare the year-to-date gain for META and TESLA.".to_owned(),
             recipient: assistant_ctx,
             request_reply: true,
         })

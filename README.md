@@ -1,5 +1,7 @@
 > [!WARNING]
-> Work in progress, this is not finished yet.
+> Work in progress, this is not finished yet. Not ready to be used.
+
+![image](./diagram.png)
 
 # initialization
 
@@ -21,7 +23,6 @@ We initialize the agents using the builder pattern. This pattern is great when y
 ```rs
 // ...rest of the code
 let mut assistant = AssistantBuilder::new("assistant").config_list(config.clone()).build();
-
 let mut user_proxy = UserProxyBuilder::new("user_proxy").config_list(config).build();
 ```
 
@@ -31,7 +32,9 @@ let mut user_proxy = UserProxyBuilder::new("user_proxy").config_list(config).bui
 
 ## Agents Communication
 
-Agents communicate with each other by using Rust built-in mpsc channel. Actually, the code uses the tokio version of mpsc, which is async, but there is the option to use sync as well.
+Agents communicate with each other by using Rust built-in mpsc channel. Actually, the code uses the tokio version of mpsc, which is async.
+
+They exchange an enum `AgentMessage`.
 
 ```rs
 // ...rest of the code
@@ -58,8 +61,6 @@ user_ctx
 handle.await?;
 ```
 
-The messages can be fired by using the `tx` from the agent context, it is also possible to not spawn the event loop and call the functions directly on the struct.
-
 ### Advantages
 - Async communication (possibility of safe multi-threaded) with the option to opt-in to sync. The AutoGen in python has duplicate functions for async/sync.
 - Idiomatic Rust code with `mpsc` channels.
@@ -75,9 +76,9 @@ Like the original AutoGen, custom repplies can be triggered by a specific agent 
 
 Custom agents can be done by creating a custom struct that implements the `Agent` and `AssistantAgent` trait. Aditionaly, it is possible to reuse the builder trait `Builder` to build this custom agent.
 
-The `AssistantAgent` handles logic that is specific to assistants, in this case, it requires the function `register_reply` to be implemented.
+The `Agent` specifies some constant values and necessary functons to communicate with it, such as `send`, `receive`, etc.
 
-The `Agent` handles logic for all agents, the `run` function and some constants strings, like model, description, system message, etc.
+The `AssistantAgent` has a blanket implementation for `Agent`, it handles logic that is specific to assistants, in this case, it requires the function `register_reply` to be implemented.
 
 
 ### Advantages
@@ -105,6 +106,8 @@ impl<'a> AssistantAgent<'a> for CustomAgent {
         function: autogen::agent::AgentReplyFn,
     ) {
         // implement logic to register custom replies.
+        //
+        // self.reply_fn_list.push(function);
     }
 }
 ```
